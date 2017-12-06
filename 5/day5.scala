@@ -1,5 +1,4 @@
 import scala.io.Source
-//val offsets = Array[Int](0, 3, 0, 1, -3)
 
 def solve(in: Seq[Int], f: Int => Int, debug: Int): Int = {
   val offsets = in.toArray
