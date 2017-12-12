@@ -3,6 +3,8 @@ import scala.io.Source
 
 /**
   * Created by mzimmerman on 12/11/17.
+  *
+  * This was helpful: http://keekerdc.com/2011/03/hexagon-grids-coordinate-systems-and-distance-calculations/
   */
 
 sealed trait Dir
@@ -43,16 +45,18 @@ case class Cell(x: Int, y: Int) {
     }
   }
 
-  def moveTo(dir: String): Cell = moveTo(Dir.parseList(dir))
+  def moveTo(dir: String): (Cell, Int) = moveTo(Dir.parseList(dir))
 
-  def moveTo(dir: List[Dir]): Cell = moveTo(dir, this)
+  def moveTo(dir: List[Dir]): (Cell, Int) = moveTo(dir, this, 0)
 
   @tailrec
-  final def moveTo(dir: List[Dir], curr: Cell): Cell =
+  final def moveTo(dir: List[Dir], curr: Cell, maxDist: Int): (Cell, Int) =
     if (dir.isEmpty)
-      curr
+      (curr, maxDist)
     else {
-      moveTo(dir.tail, curr.next(dir.head))
+      val next = curr.next(dir.head)
+      val nextDist = Cell(0, 0).dist(next)
+      moveTo(dir.tail, next, if (nextDist > maxDist) nextDist else maxDist)
     }
 
   def dist(that: Cell): Int = List(that.x - this.x, that.y - this.y, that.z - this.z).max
@@ -68,8 +72,8 @@ val test2 = List(
 )
 for (t <- test2) {
   val c1 = c0.moveTo(t)
-  println(s"$t => $c1 (${c0.dist(c1)})")
+  println(s"$t => $c1 (${c0.dist(c1._1)}, ${c1._2})")
 }
 
 val out = c0.moveTo(input)
-println(s"<input> => $out (${c0.dist(out)})")
+println(s"<input> => $out (${c0.dist(out._1)}, ${out._2})")
