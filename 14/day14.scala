@@ -61,4 +61,20 @@ object Knot {
   }
 }
 
-println(Knot.hash("flqrgnkx-0"))
+def hexToBinary(hex: String): String = {
+  "%-8s".format(Integer.parseInt(hex, 16).toBinaryString).replace(' ', '0')
+}
+
+def countBits(prefix: String): Int = {
+  (0 to 127).map(i => {
+    val hash = Knot.hash(prefix + "-" + i.toString)
+    //println(hash)
+    //if (i <= 7)
+      //println(hexToBinary(hash.substring(0,3)).replace('0', '-').replace('1', '#'))
+    //println(hash.sliding(4, 4).toList.map(hexToBinary).mkString.replace('0', '-').replace('1', '#'))
+    hash.sliding(4, 4).toList.map(Integer.parseUnsignedInt(_, 16)).map(Integer.bitCount).sum
+  }).sum
+}
+
+println(countBits("flqrgnkx"))
+println(countBits("ffayrhll"))
