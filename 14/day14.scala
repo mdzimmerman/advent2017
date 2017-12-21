@@ -61,20 +61,38 @@ object Knot {
   }
 }
 
+
 def hexToBinary(hex: String): String = {
-  "%-8s".format(Integer.parseInt(hex, 16).toBinaryString).replace(' ', '0')
+  "%16s".format(Integer.parseInt(hex, 16).toBinaryString).replace(' ', '0')
 }
 
 def countBits(prefix: String): Int = {
   (0 to 127).map(i => {
     val hash = Knot.hash(prefix + "-" + i.toString)
-    //println(hash)
-    //if (i <= 7)
-      //println(hexToBinary(hash.substring(0,3)).replace('0', '-').replace('1', '#'))
-    //println(hash.sliding(4, 4).toList.map(hexToBinary).mkString.replace('0', '-').replace('1', '#'))
+    val line = hash.sliding(4, 4).toList.map(hexToBinary).mkString.replace('0', '-').replace('1', '#')
+    if (i <= 7)
+      println(line.substring(0, 8))
     hash.sliding(4, 4).toList.map(Integer.parseUnsignedInt(_, 16)).map(Integer.bitCount).sum
   }).sum
 }
 
-println(countBits("flqrgnkx"))
-println(countBits("ffayrhll"))
+def buildArray(prefix: String): Array[Array[Int]] = {
+  (0 to 127).map(i => {
+    val hash = Knot.hash(prefix + "-" + i.toString)
+    val row = hash.sliding(4, 4).toList.map(hexToBinary).mkString.toArray.map(_.toString.toInt)
+    row
+  }).toArray
+}
+
+val test  = "flqrgnkx"
+val input = "ffayrhll"
+
+println(countBits(test))
+println(countBits(input))
+
+val testArray = buildArray(test)
+for (j <- 0 to 7) {
+  for (i <- 0 to 7)
+    print(if (testArray(j)(i) == 1) "#" else "-")
+  println()
+}
