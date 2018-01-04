@@ -1,4 +1,5 @@
 import scala.annotation.tailrec
+import scala.collection.mutable
 
 /**
   * Created by mzimmerman on 12/18/17.
@@ -87,12 +88,74 @@ def buildArray(prefix: String): Array[Array[Int]] = {
 val test  = "flqrgnkx"
 val input = "ffayrhll"
 
-println(countBits(test))
-println(countBits(input))
+//println(countBits(test))
+//println(countBits(input))
 
 val testArray = buildArray(test)
-for (j <- 0 to 7) {
-  for (i <- 0 to 7)
-    print(if (testArray(j)(i) == 1) "#" else "-")
-  println()
+val inputArray = buildArray(input)
+
+def printarray(array: Array[Array[Int]]): Unit =
+  for (j <- 0 to 7) {
+    for (i <- 0 to 7) {
+      print(array(j)(i) match {
+        case 1  => "#"
+        case -1 => "o"
+        case _  => "-"
+      })
+    }
+    println()
+  }
+
+case class Point(x: Int, y: Int) {
+  def add(that: Point): Point = {
+    Point(this.x + that.x, this.y + that.y)
+  }
 }
+
+val directions = List(Point(-1, 0), Point(0, -1), Point(1, 0), Point(0, 1))
+
+def neighbors(array: Array[Array[Int]], p: Point) = {
+  for {
+    d <- directions
+    np = p.add(d)
+    if np.x >= 0 && np.x <= 127 && np.y >= 0 && np.y <= 127 && array(np.y)(np.x) == 1
+  } yield np
+}
+
+def dfs(array: Array[Array[Int]], start: Point): Unit = {
+  val s = mutable.Stack[Point]()
+  s.push(start)
+  while (s.nonEmpty) {
+    val p = s.pop()
+    //println(p)
+    if (array(p.y)(p.x) == 1) {
+      array(p.y)(p.x) = -1
+      for (np <- neighbors(array, p))
+        s.push(np)
+    }
+  }
+}
+
+def countGroups(array: Array[Array[Int]]) = {
+  var x = 0
+  var y = 0
+  var groups = 0
+  while (y <= 127) {
+    if (array(y)(x) == 1) {
+      dfs(array, Point(x, y))
+      groups += 1
+    }
+    x += 1
+    if (x > 127) {
+      x = 0
+      y += 1
+    }
+  }
+  groups
+}
+
+printarray(testArray)
+println(countGroups(testArray))
+println(countGroups(inputArray))
+//dfs(testArray, Point(0, 0))
+//printarray(testArray)
