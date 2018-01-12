@@ -36,21 +36,19 @@ object Particle {
 }
 
 @tailrec
-def run(n: Int, ps: Seq[Particle]): Seq[Particle] = {
-  println(ps.sortWith(_.distance < _.distance).map(_.id))
+def run(n: Int, ps: List[Particle]): List[Particle] = {
+  println(ps.length+" "+ps.sortWith(_.distance < _.distance).map(_.id).take(10))
   if (n == 0)
     ps
   else {
-    run(n-1, ps.map(_.next()))
-  }
-}
-
-def runCollide(n: Int, ps: Seq[Particle]): Seq[Particle] = {
-  if (n == 0)
-    ps
-  else {
-    val posit = ps.map(_.posit)
-    run(n-1, ps)
+    //val psNew = ps.map(_.next())
+    val psNew = ps.map(_.next()).foldLeft[Map[Vec,List[Particle]]](Map()){case(map, p) => {
+      if (map.contains(p.posit))
+        map + (p.posit -> (p :: map(p.posit)) )
+      else
+        map + (p.posit -> List(p))
+    }}.filter{case(posit, particles) => particles.size == 1}.values.flatten.toList
+    run(n-1, psNew)
   }
 }
 
@@ -60,12 +58,12 @@ val testInput = List(
 )
 val test = testInput.zipWithIndex.flatMap{case (s, i) => {
   Particle.parse(i, s)
-}}.toSeq
+}}
 
 run(100, test)
 
 val input = Source.fromFile("input.txt").getLines().zipWithIndex.flatMap{case (s, i) => {
   Particle.parse(i, s)
-}}.toSeq
+}}.toList
 
 run(1000, input)
