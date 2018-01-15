@@ -1,5 +1,6 @@
 import scala.collection.mutable
 import scala.io.Source
+import scala.util.matching.Regex
 
 sealed trait Value
 case class Register(name: String) extends Value
@@ -15,8 +16,8 @@ object Instruction {
   val register = """[a-z]"""
   val literal  = """-?\d+"""
   val value    = s"""$register|$literal"""
-  val registerPattern = s"""($register)""".r
-  val literalPattern  = s"""($literal)""".r
+  val registerPattern: Regex = s"""($register)""".r
+  val literalPattern: Regex = s"""($literal)""".r
 
   object AsValue {
     def unapply(s: String): Option[Value] = s match {
@@ -33,10 +34,10 @@ object Instruction {
     }
   }
 
-  val set = s"""set ($register) ($value)""".r
-  val sub = s"""sub ($register) ($value)""".r
-  val mul = s"""mul ($register) ($value)""".r
-  val jnz = s"""jnz ($value) ($value)""".r
+  val set: Regex = s"""set ($register) ($value)""".r
+  val sub: Regex = s"""sub ($register) ($value)""".r
+  val mul: Regex = s"""mul ($register) ($value)""".r
+  val jnz: Regex = s"""jnz ($value) ($value)""".r
 
   def parse(s: String): Option[Instruction] = s match {
     case set(AsRegister(x), AsValue(y)) => Some(Set(x, y))
@@ -48,7 +49,7 @@ object Instruction {
 }
 
 class Program(instructions: Seq[Instruction]) {
-  val register = mutable.Map[String, Long]()
+  val register: mutable.Map[String, Long] = mutable.Map[String, Long]()
   var pointer = 0
   init()
 
@@ -59,14 +60,14 @@ class Program(instructions: Seq[Instruction]) {
     pointer = 0
   }
 
-  def get(name: String) = register(name)
+  def get(name: String): Long = register(name)
 
   def getValue(v: Value): Long = v match {
     case reg: Register => register(reg.name)
     case lit: Literal  => lit.n
   }
 
-  def set(name: String, n: Long) = register(name) = n
+  def set(name: String, n: Long): Unit = register(name) = n
 
   def run(): Unit = {
     var i = 0
@@ -99,9 +100,9 @@ def isPrime(n: Int): Boolean = n match {
   case 1 => false
   case 2 => true
   case 3 => true
-  case n if n % 2 == 0 => false
-  case n if n % 3 == 0 => false
-  case n =>
+  case x if x % 2 == 0 => false
+  case x if x % 3 == 0 => false
+  case x =>
     for (i <- 5 to Math.sqrt(n).floor.toInt) {
       if (n % i == 0 ) {
         return false
