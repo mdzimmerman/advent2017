@@ -95,8 +95,49 @@ class Program(instructions: Seq[Instruction]) {
   }
 }
 
+def isPrime(n: Int): Boolean = n match {
+  case 1 => false
+  case 2 => true
+  case 3 => true
+  case n if n % 2 == 0 => false
+  case n if n % 3 == 0 => false
+  case n =>
+    for (i <- 5 to Math.sqrt(n).floor.toInt) {
+      if (n % i == 0 ) {
+        return false
+      }
+    }
+    true
+}
+
+def testProgram(a0: Int = 0): Int = {
+  var a = a0
+  var b = 0
+  var c = 0
+  var h = 0
+
+  b = 67
+  c = b
+  if (a == 0) {
+    //
+  } else {
+    b *= 100
+    b += 100000
+    c = b
+    c += 17000
+  }
+
+  for (b0 <- b to c by 17) {
+    println(b0)
+    if (!isPrime(b0))
+      h += 1
+  }
+  h
+}
+
 val input = new Program(Source.fromFile("input.txt").getLines().flatMap(Instruction.parse).toSeq)
-//input.run()
 input.init()
-//input.set("a", 1)
+input.set("a", 0)
 input.run()
+
+println(testProgram(1))
