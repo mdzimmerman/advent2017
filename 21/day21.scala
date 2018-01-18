@@ -1,3 +1,6 @@
+import scala.annotation.tailrec
+import scala.io.Source
+
 /**
   * Created by mzimmerman on 1/15/18.
   */
@@ -32,14 +35,15 @@ case class Grid(array: Array[Char], size: Int) {
 
   def rotate: Grid = transpose.flipHoriz
 
-  def transformations: Set[Grid] = {
+  def transformations: List[Grid] = {
     val rot90 = rotate
     val rot180 = rot90.rotate
     val rot270 = rot180.rotate
-    Set(flipHoriz, flipVert, rot90, rot180, rot270)
+    List(this, flipVert, rot90, rot90.flipVert, rot180, rot180.flipVert, rot270, rot270.flipVert)
   }
 
-  def matches(that: Grid): Boolean = this == that || transformations.contains(that)
+  def matches(that: Grid): Boolean =
+    this.size == that.size && transformations.exists(_.array.mkString("") == that.array.mkString(""))
 
   def subgrid(r0: Int, c0: Int, subsize: Int): Grid = {
     val r1 = r0 + subsize
@@ -50,6 +54,23 @@ case class Grid(array: Array[Char], size: Int) {
   def split(subsize: Int): List[Grid] = {
     (for (r <- 0 until size by subsize; c <- 0 until size by subsize) yield subgrid(r, c, subsize)).toList
   }
+
+  def enhance(rules: List[Rule]): Grid = {
+    val subgrids = size match {
+      case n if n % 2 == 0 =>
+        split(2)
+      case n if n % 3 == 0 =>
+        split(3)
+      case _ =>
+        throw new Exception("invalid grid size")
+    }
+    //println(subgrids)
+    val newSubgrids = subgrids.map(Rule.replace(rules, _))
+   // println(newSubgrids)
+    Grid.join(newSubgrids)
+  }
+
+  def countOn: Int = array.count(_ == '#')
 }
 
 object Grid {
@@ -77,6 +98,17 @@ object Grid {
     val size = grids.head.size
     Grid(Grid.iterateJoined(grids, dim).toArray, dim * size)
   }
+
+  @tailrec
+  final def applyEnhance(left: Int, grid: Grid, rules: List[Rule], debug: Boolean = true): Grid = {
+    if (debug) grid.print()
+    println(s"$left: ${grid.countOn}")
+    println()
+    if (left == 0)
+      grid
+    else
+      applyEnhance(left-1, grid.enhance(rules), rules, debug)
+  }
 }
 
 object AsGrid {
@@ -100,36 +132,25 @@ object Rule {
     case rulePattern(AsGrid(in), AsGrid(out)) => Some(Rule(in, out))
     case _ => None
   }
+
+  def replace(rules: List[Rule], grid: Grid): Grid = {
+    val rule = rules.find(r => r.input.matches(grid)).head
+    //println(rule)
+    rule.output
+  }
 }
 
 val start = Grid.parse(".#./..#/###").get
-start.print()
-println("rotate 90")
-start.rotate.print()
-println("rotate 180")
-start.rotate.rotate.print()
-println("rotate 270")
-start.rotate.rotate.rotate.print()
-println("flip vert")
-start.flipVert.print()
-println("flip horiz")
-start.flipHoriz.print()
-println("transpose")
-start.transpose.print()
-println()
-val test = Grid.parse("#..#/..../..../#..#").get
-test.print()
-val testSplit = (test.split(2))
-println(testSplit)
-val testRejoined = Grid.join(testSplit)
-testRejoined.print()
-println()
+
+println("--- test ---")
 val testRules = List(
   "../.# => ##./#../...",
   ".#./..#/### => #..#/..../..../#..#"
 ).flatMap(Rule.parse)
-println(testRules)
-//test2.subgrid(0, 0, 2).print()
-//test2.subgrid(0, 2, 2).print()
-//test2.subgrid(2, 0, 2).print()
-//test2.subgrid(2, 2, 2).print()
+Grid.applyEnhance(2, start, testRules)
+
+println("--- input ---")
+val inputRules = Source.fromFile("input.txt").getLines().flatMap(Rule.parse).toList
+Grid.applyEnhance(5, start, inputRules)
+
+Grid.applyEnhance(18, start, inputRules, false)
