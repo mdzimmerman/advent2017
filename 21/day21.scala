@@ -1,4 +1,5 @@
 import scala.annotation.tailrec
+import scala.collection.mutable
 import scala.io.Source
 
 /**
@@ -6,7 +7,7 @@ import scala.io.Source
   */
 case class Coord(r: Int, c: Int)
 
-case class Grid(array: Array[Char], size: Int) {
+case class Grid(array: Vector[Char], size: Int) {
   def getIndex(r: Int, c: Int): Int = r * size + c
 
   def get(r: Int, c: Int): Char = array(getIndex(r, c))
@@ -25,13 +26,13 @@ case class Grid(array: Array[Char], size: Int) {
     for (r <- r0 until r1; c <- c0 until c1) yield Coord(r, c)
 
   def flipVert: Grid =
-    Grid(indices.map{x => get(size-1-x.r, x.c)}.toArray, size)
+    Grid(indices.map{x => get(size-1-x.r, x.c)}.toVector, size)
 
   def flipHoriz: Grid =
-    Grid(indices.map{x => get(x.r, size-1-x.c)}.toArray, size)
+    Grid(indices.map{x => get(x.r, size-1-x.c)}.toVector, size)
 
   def transpose: Grid =
-    Grid(indices.map{x => get(x.c, x.r)}.toArray, size)
+    Grid(indices.map{x => get(x.c, x.r)}.toVector, size)
 
   def rotate: Grid = transpose.flipHoriz
 
@@ -48,14 +49,15 @@ case class Grid(array: Array[Char], size: Int) {
   def subgrid(r0: Int, c0: Int, subsize: Int): Grid = {
     val r1 = r0 + subsize
     val c1 = c0 + subsize
-    Grid(indices(r0, r1, c0, c1).map{x => get(x.r, x.c)}.toArray, subsize)
+    Grid(indices(r0, r1, c0, c1).map{x => get(x.r, x.c)}.toVector, subsize)
   }
 
-  def split(subsize: Int): List[Grid] = {
-    (for (r <- 0 until size by subsize; c <- 0 until size by subsize) yield subgrid(r, c, subsize)).toList
+  def split(subsize: Int): Vector[Grid] = {
+    (for (r <- 0 until size by subsize; c <- 0 until size by subsize) yield subgrid(r, c, subsize)).toVector
   }
 
-  def enhance(rules: List[Rule]): Grid = {
+  def enhance(rules: RuleList): Grid = {
+    //println("building subgrids")
     val subgrids = size match {
       case n if n % 2 == 0 =>
         split(2)
@@ -65,8 +67,10 @@ case class Grid(array: Array[Char], size: Int) {
         throw new Exception("invalid grid size")
     }
     //println(subgrids)
-    val newSubgrids = subgrids.map(Rule.replace(rules, _))
+    //println("replacing subgrids")
+    val newSubgrids = subgrids.map(rules.replace)
    // println(newSubgrids)
+    //println("joining subgrids")
     Grid.join(newSubgrids)
   }
 
@@ -78,12 +82,12 @@ object Grid {
     val lines = s.split("/")
     val size = lines.length
     if (lines.count(_.length == size) == size)
-      Some(Grid(lines.mkString("").toCharArray, size))
+      Some(Grid(lines.mkString("").toVector, size))
     else
       None
   }
 
-  def iterateJoined(grids: List[Grid], dim: Int): IndexedSeq[Char] = {
+  def iterateJoined(grids: Vector[Grid], dim: Int): IndexedSeq[Char] = {
     val size = grids.head.size
     for (gridRow <- 0 until dim;
          row <- 0 until size;
@@ -93,17 +97,17 @@ object Grid {
       yield grids(gridI).get(row, col)
   }
 
-  def join(grids: List[Grid]): Grid = {
+  def join(grids: Vector[Grid]): Grid = {
     val dim = Math.round(Math.sqrt(grids.length)).toInt
     val size = grids.head.size
-    Grid(Grid.iterateJoined(grids, dim).toArray, dim * size)
+    Grid(Grid.iterateJoined(grids, dim).toVector, dim * size)
   }
 
   @tailrec
-  final def applyEnhance(left: Int, grid: Grid, rules: List[Rule], debug: Boolean = true): Grid = {
+  final def applyEnhance(left: Int, grid: Grid, rules: RuleList, debug: Boolean = true): Grid = {
     if (debug) grid.print()
     println(s"$left: ${grid.countOn}")
-    println()
+    if (debug) println()
     if (left == 0)
       grid
     else
@@ -132,25 +136,32 @@ object Rule {
     case rulePattern(AsGrid(in), AsGrid(out)) => Some(Rule(in, out))
     case _ => None
   }
+}
 
-  def replace(rules: List[Rule], grid: Grid): Grid = {
-    val rule = rules.find(r => r.input.matches(grid)).head
-    //println(rule)
-    rule.output
+case class RuleList(rules: List[Rule]) {
+  val cache: mutable.Map[Grid, Grid] = mutable.Map()
+
+  def replace(grid: Grid): Grid =
+    if (cache.contains(grid))
+      cache(grid)
+    else {
+      val matching = rules.find(r => r.input.matches(grid)).head
+      cache(grid) = matching.output
+      matching.output
   }
 }
 
 val start = Grid.parse(".#./..#/###").get
 
 println("--- test ---")
-val testRules = List(
+val testRules = RuleList(List(
   "../.# => ##./#../...",
   ".#./..#/### => #..#/..../..../#..#"
-).flatMap(Rule.parse)
+).flatMap(Rule.parse))
 Grid.applyEnhance(2, start, testRules)
 
 println("--- input ---")
-val inputRules = Source.fromFile("input.txt").getLines().flatMap(Rule.parse).toList
+val inputRules = RuleList(Source.fromFile("input.txt").getLines().flatMap(Rule.parse).toList)
 Grid.applyEnhance(5, start, inputRules)
 
 Grid.applyEnhance(18, start, inputRules, false)
